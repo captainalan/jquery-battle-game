@@ -63,6 +63,9 @@ function print(message) {
 
 function benchHandler(index) {
     /* Index is to Contender in contenders array */
+
+    if (game_state.game_over === true) return;
+
     /* Depending on the game_state, call different functions as appropriate */
     if (game_state.player_index === null) {
 	game_state.player_index = index;
@@ -94,6 +97,9 @@ function benchHandler(index) {
 
 
 function attack(player_index, opponent_index) {
+
+    if (game_state.game_over === true) return;
+
     if (game_state.player_index === null
 	|| game_state.opponent_index === null) {
 	print("You can't attack until you select a PLAYER and an OPPONENT.");
@@ -118,13 +124,9 @@ function attack(player_index, opponent_index) {
     /* Check win/lose conditions */
     if (game_state.health_points.every((value, index) => {
 	(index === player_index && value > 0) || value <= 0 })){
-	console.log("You win!");
-	game_state.game_over = true;
-	// Call win() 
+	win() 
     } else if (game_state.health_points[player_index] <= 0) {
-	console.log("Oh dear, you have been defeated.");
-	game_state.game_over = true;
-	// Call lose()
+	lose()
     }
 }
 
@@ -176,4 +178,16 @@ function reset() {
 
     /* Reset game logic */
     setup();
+}
+
+function win() {
+    /* Call this function if PLAYER wins */
+    print(`Game over. PLAYER (${contenders[game_state.player_index]}) wins.`);
+    game_state.game_over = true;
+}
+
+function lose() {
+    /* Call this function if PLAYER loses */
+    print("Oh dear, you have been defeated. Select 'Reset Game' to try again.");
+    game_state.game_over = true;
 }

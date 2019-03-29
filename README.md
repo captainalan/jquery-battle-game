@@ -10,3 +10,4 @@ Game made with jQuery, Bootstrap, and plain HTML/CSS.
 - [ ] Figure out how to check win/lose conditions
 - [ ] Add health bars to Player, Opponent components
 - [ ] CSS Styling
+    - [ ] Options to show/hide Log
