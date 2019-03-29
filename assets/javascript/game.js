@@ -1,3 +1,5 @@
+'use strict'
+
 /* Game state as global object */
 let game_state = {
     // variable storing which contender is the Player
@@ -7,7 +9,9 @@ let game_state = {
     opponent_index: null, // Not set yet
 
     // Is a game in progress?
-    game_over: false
+    game_over: false,
+
+    health_points: null
 };
 
 
@@ -31,23 +35,22 @@ class Contender {
     }
 };
 
-// Make some contenders
-let contenders = new Array(4);
-contenders[0] = new Contender("no0", "Donald Trump", 100, 100, 100);
-contenders[1] = new Contender("no1", "Bernie Sanders", 100, 100, 100);
-contenders[2] = new Contender("no2", "Andrew Yang", 100, 100, 100);
-contenders[3] = new Contender("no3", "Elizabeth Warren", 100, 100, 100);
+// These are the stats of the contenders we will reset values to...
+const contenders = new Array(4);
+contenders[0] = new Contender("no0", "Donald Trump", 100, 50, 45);
+contenders[1] = new Contender("no1", "Bernie Sanders", 100, 50, 45);
+contenders[2] = new Contender("no2", "Andrew Yang", 100, 50, 45);
+contenders[3] = new Contender("no3", "Elizabeth Warren", 100, 50, 45);
+
 
 /* Entry point into game */
 $(document).ready(() => {
     $('#attack_button').on('click', () => {
-			   attack(contenders[game_state.player_index],
-				  contenders[game_state.opponent_Index])
+	attack(game_state.player_index, game_state.opponent_index);
     });
     $('#reset_button').on('click', reset);
     setup();
 });
-
 
 
 /* Print a message to the message area*/
@@ -63,52 +66,73 @@ function benchHandler(index) {
     /* Depending on the game_state, call different functions as appropriate */
     if (game_state.player_index === null) {
 	game_state.player_index = index;
-	print(`You are now playing as ${contenders[index].name}`);
+	print(`You are now playing as ${contenders[index].name}.`);
+	print('Now, select an opponent from the Waiting Bench.');
 
 	/* Remove selected contender from bench; update player area  */
 	$('#' + contenders[index].html_id).remove();
 	$('#player_area_display')
-	    .append( $('<p></p>').text(contenders[index].name));
+	    .append( $('<p></p>')
+		     .attr("id", contenders[game_state.player_index].html_id)
+		     .text(contenders[index].name));
 
     } else if (game_state.opponent_index === null) {
 	game_state.opponent_index = index;
-	print(`Your opponent is now ${contenders[index].name}`);
+	print(`Your opponent is now ${contenders[index].name}.`);
 	
 	/* Remove selected contender from bench; update player area  */
 	$("#" + contenders[index].html_id).remove();
 	$('#opponent_area_display')
-	    .append( $('<p></p>').text(contenders[index].name));
+	    .append( $('<p></p>')
+		     .attr("id", contenders[game_state.opponent_index].html_id)
+		     .text(contenders[index].name));
 
     } else {
 	print(`Keep calm and click on... Index: ${index}`);
     }
 }
 
-function choosePlayer() {
-    /* Check game_state to see if the player has already chosen a contender */
-    /* If there is no player selected yet,
-       Add click event to all on the bench
-     */
-}
 
-function chooseOpponent() {
-    print("Please choose a contender to play against from the Bench");
-    /* Check if there are any opponents left to choose from */
-}
-
-function attack(player, opponent) {
+function attack(player_index, opponent_index) {
     if (game_state.player_index === null
 	|| game_state.opponent_index === null) {
 	print("You can't attack until you select a PLAYER and an OPPONENT.");
+	return;
     } else {
-	print("You attack!");
+	print(`PLAYER (${contenders[player_index].name}) attacks!`);
+	game_state.health_points[opponent_index] -=
+	    contenders[player_index].atk_pwr;
     }
+
     /* If opponent is not defeated, allow opponent to counterAttack */
+    if (game_state.health_points[opponent_index] > 0) {
+	counterAttack(player_index, opponent_index);
+    } else {
+	/* Remove defeated opponent */
+	print(`OPPONENT ${contenders[opponent_index].name} has been defeated.`);
+	$('#' + contenders[opponent_index].html_id).remove();
+
+	game_state.opponent_index = null;
+    }
+
+    /* Check win/lose conditions */
+    if (game_state.health_points.every((value, index) => {
+	(index === player_index && value > 0) || value <= 0 })){
+	console.log("You win!");
+	game_state.game_over = true;
+	// Call win() 
+    } else if (game_state.health_points[player_index] <= 0) {
+	console.log("Oh dear, you have been defeated.");
+	game_state.game_over = true;
+	// Call lose()
+    }
 }
 
-function counterAttack(player, opponent) {
-    // User should not call this function directly
-    ;
+/* User should not call this function directly */
+function counterAttack(player_index, opponent_index) {
+    print(`${contenders[opponent_index].name} strikes back!`);
+    game_state.health_points[player_index] -=
+	contenders[opponent_index].ctr_atk_pwr;
 }
 
 function setup() {
@@ -116,7 +140,7 @@ function setup() {
 
     // Create a div for each contender
     contenders.forEach( (contender, index) => {
-	var contender_to_add = $('<div></div>')
+	let contender_to_add = $('<div></div>')
 	    .attr("id", contender.html_id)
 	    .text(contender.name)
 	    .addClass("benched")        // Classes for easy selection
@@ -126,15 +150,20 @@ function setup() {
 	$('#waiting_bench').append(contender_to_add);
     });
 
+    // In game state, we can store current health points of each contender
+    game_state.health_points = contenders.map( contender => {
+	return contender.health_points;
+    });
+
     print("Done!");
 
     // Player must first choose a character (Contender)
     game_state.player_index   = null;
-    game_state.opponent_index = null;
-    game_state.game_over      = false;
-    print("Please choose a contender to play as from the Bench.");
-
     // Player must then select an opponent
+    game_state.opponent_index = null;
+    // These two tasked are handled by the benchHandler function.
+    game_state.game_over      = false;
+    print("Please choose a contender to play as from the Waiting Bench.");
 }
 
 function reset() {
